@@ -37,12 +37,13 @@ jobs:
           ls -lha 
           tree -a
 
+      # if you use detect -v  you can see "all leask"
       - name: Run gitleaks
         run: |
           docker run \
           --rm \
           -v $PWD:/project \
-          -v  ${{ env.BUILD_CONTEXT }}:/data/gitleaks \
+          -v  ${{ env.DATA_SCANS }}:/data/gitleaks \
           zricethezav/gitleaks \
-          detect -v --source=/project --exit-code 0
+          detect --source=/project --exit-code 0
           
