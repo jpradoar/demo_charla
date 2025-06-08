@@ -1,0 +1,27 @@
+name: DevSecOps Pipeline
+
+on:
+  push:
+    branches: [ main ]
+
+jobs:
+
+  DevSecOps:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          ref: 'main'
+          path: '/data'
+
+      - name: show data
+        run: |
+          apt-get update; apt-get install tree -y
+          ls -lha /data
+          tree -a
+
+      - name: Run Trivy
+        run: |
+          docker run -it -v $PWD:/data zricethezav/gitleaks detect -v --source=/data --exit-code 0
+          
