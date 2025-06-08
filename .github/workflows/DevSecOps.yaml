@@ -38,8 +38,7 @@ jobs:
       - name: Run Gitleaks
         if: env.RUN_GITLEAKS == 'true'
         run: |
-          docker run --rm -v $PWD:/data zricethezav/gitleaks \
-            detect -v --source=/data --exit-code 0
+          docker run --rm -v $PWD:/data zricethezav/gitleaks detect -v --source=/data --exit-code 0
 
 
 
@@ -49,7 +48,7 @@ jobs:
       - name: Build package
         if: env.RUN_LINTIAN == 'true'
         run: |
-          echo "Acá se buildea el .deb y se guarda en env.DEB_PATH"
+          echo "Acá se buildea el .deb y se guarda en ${{ env.DEB_PATH }}"
 
 #-----------------------------------
 # Escaneo de paquete .deb
@@ -57,7 +56,7 @@ jobs:
       - name: Run Lintian
         if: env.RUN_LINTIAN == 'true'
         run: |
-          docker run --rm -v $PWD:/data nouchka/lintian /data/$DEB_PATH
+          docker run --rm -v $PWD:/data nouchka/lintian /data/${{ env.DEB_PATH }}
 
 
 
@@ -67,7 +66,7 @@ jobs:
       - name: Run Tfsec
         if: env.RUN_TFSEC == 'true'
         run: |
-          docker run --rm -v $PWD:/data tfsec/tfsec /data/$TERRAFORM_PATH
+          docker run --rm -v $PWD:/data tfsec/tfsec /data/${{ env.TERRAFORM_PATH }}
 
 
 #-----------------------------------
@@ -76,7 +75,7 @@ jobs:
       - name: Build image
         if: env.RUN_TRIVY == 'true'
         run: |
-          docker build -t $DOCKER_IMAGE_NAME .
+          docker build -t ${{ env.DOCKER_IMAGE_NAME }} .
           docker save vuln_docker:latest -o vuln_docker.tar
 
       # Escaneo de imagen con Trivy (el docker save es para no montar el /run/socket.sock)
@@ -102,16 +101,16 @@ jobs:
       - name: Start demo app container
         if: env.RUN_NUCLEI == 'true'
         run: |
-          docker run -d --name $APP_CONTAINER_NAME --network devsecops-net -p $APP_PORT $APP_IMAGE
+          docker run -d --name $APP_CONTAINER_NAME --network devsecops-net -p ${{ env.APP_PORT }} ${{ env.APP_IMAGE }}
 
       # Esperar que levante la app
       - name: Wait for app to be ready
         if: env.RUN_NUCLEI == 'true'
         run: |
-          docker run --rm --network devsecops-net curlimages/curl sh -c 'until curl -s "$APP_URL"; do echo "Waiting for app..."; sleep 1; done'
+          docker run --rm --network devsecops-net curlimages/curl sh -c 'until curl -s "${{ env.APP_IMAGE }}:${{ env.APP_PORT }}"; do echo "Waiting for app..."; sleep 1; done'
 
       # Escaneo Nuclei
       - name: Run Nuclei scan
         if: env.RUN_NUCLEI == 'true'
         run: |
-          docker run --rm --network devsecops-net projectdiscovery/nuclei -u "$APP_URL" -silent
+          docker run --rm --network devsecops-net projectdiscovery/nuclei -u "${{ env.APP_URL }}" -silent
