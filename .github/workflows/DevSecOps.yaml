@@ -93,15 +93,11 @@ jobs:
 #-----------------------------------
 
 
-      - name: Create Docker network (para Nuclei)
-        if: env.RUN_NUCLEI == 'true'
-        run: docker network create devsecops-net
-
       # Lanzar la app de demo
       - name: Start demo app container
         if: env.RUN_NUCLEI == 'true'
         run: |
-          docker run -d --name $APP_CONTAINER_NAME --network devsecops-net -p ${{ env.APP_PORT }} ${{ env.APP_IMAGE }}
+          docker run -d --name ${{ env.APP_CONTAINER_NAME }} --network=host -p ${{ env.APP_PORT }} ${{ env.APP_IMAGE }}
 
       # Esperar que levante la app
       - name: Wait for app to be ready (máx. 10s)
@@ -123,4 +119,4 @@ jobs:
       - name: Run Nuclei scan
         if: env.RUN_NUCLEI == 'true'
         run: |
-          docker run --rm --network devsecops-net projectdiscovery/nuclei -u "${{ env.APP_URL }}" -silent
+          docker run --rm --network=host projectdiscovery/nuclei -u "${{ env.APP_URL }}" -silent
