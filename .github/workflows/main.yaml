@@ -7,7 +7,7 @@ on:
 
 
 env:
-  DATA_CONTENT: '/tmp/data'
+  DATA_CONTENT: 'demo_charla'
   DATA_SCANS: '/tmp/scans'
   SLACK_CHANNEL: 'builds-and-ci'
   SLACK_MSG_COLOR: '#0092ff'
@@ -31,8 +31,7 @@ jobs:
         uses: actions/checkout@v4
         with:
           ref: 'main'
-          path: '/tmp/data'
-
+          
       - name: show data
         run: |
           apt-get update; apt-get install tree -y
@@ -41,5 +40,5 @@ jobs:
 
       - name: Run Trivy
         run: |
-          docker run -it -v ${{ env.DATA_CONTENT }}:/data zricethezav/gitleaks detect -v --source=/data --exit-code 0
+          docker run --rm -v ${{ env.DATA_CONTENT }}:/project zricethezav/gitleaks detect -v --source=/project --exit-code 0
           
