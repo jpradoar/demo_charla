@@ -34,11 +34,11 @@ jobs:
           
       - name: show data
         run: |
-          apt-get update; apt-get install tree -y
-          ls -lha ${{ env.DATA_CONTENT }}
+          sudo apt-get update; sudo apt-get install tree -y
+          ls -lha $PWD/${{ env.DATA_CONTENT }}
           tree -a
 
       - name: Run Trivy
         run: |
-          docker run --rm -v ${{ env.DATA_CONTENT }}:/project zricethezav/gitleaks detect -v --source=/project --exit-code 0
+          docker run --rm -v $PWD/${{ env.DATA_CONTENT }}:/project zricethezav/gitleaks detect -v --source=/project --exit-code 0
           
