@@ -20,7 +20,7 @@ env:
   # App para test con Nuclei
   APP_IMAGE: nginx:latest
   APP_CONTAINER_NAME: test-app
-  APP_PORT: '8080:80'
+  APP_PORT: '8080'
   APP_URL: http://test-app:80/
 
 jobs:
@@ -97,7 +97,7 @@ jobs:
       - name: Start demo app container
         if: env.RUN_NUCLEI == 'true'
         run: |
-          docker run -d --name ${{ env.APP_CONTAINER_NAME }} --network=host -p ${{ env.APP_PORT }} ${{ env.APP_IMAGE }}
+          docker run -d --name ${{ env.APP_CONTAINER_NAME }} --network=host -p ${{ env.APP_PORT }}:80 ${{ env.APP_IMAGE }}
 
       # Esperar que levante la app
       - name: Wait for app to be ready (máx. 10s)
