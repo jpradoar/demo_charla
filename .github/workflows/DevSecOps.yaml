@@ -20,7 +20,7 @@ env:
   # App para test con Nuclei
   APP_IMAGE: nginx:latest
   APP_CONTAINER_NAME: test-app
-  APP_PORT: '8080'
+  APP_PORT: 80
   APP_URL: http://test-app:80/
 
 jobs:
@@ -104,8 +104,8 @@ jobs:
         if: env.RUN_NUCLEI == 'true'
         run: |
           for i in {1..10}; do
-            echo "Waiting for app on localhost:${{ env.APP_PORT }}... (attempt $i)"
-            if curl -sSf http://localhost:${{ env.APP_PORT }} > /dev/null; then
+            echo "Waiting for app on localhost:80... (attempt $i)"
+            if curl -sSf http://localhost:80 > /dev/null; then
               echo "App is ready!"
               exit 0
             fi
@@ -119,4 +119,4 @@ jobs:
       - name: Run Nuclei scan
         if: env.RUN_NUCLEI == 'true'
         run: |
-          docker run --rm --network=host projectdiscovery/nuclei -u "${{ env.APP_URL }}" -silent
+          docker run --rm --network=host projectdiscovery/nuclei -u "http://localhost:80" -silent
