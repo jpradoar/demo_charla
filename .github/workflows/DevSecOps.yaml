@@ -20,7 +20,7 @@ env:
   # App para test con Nuclei
   APP_IMAGE: nginx:latest
   APP_CONTAINER_NAME: test-app
-  APP_PORT: 8080:80
+  APP_PORT: '8080:80'
   APP_URL: http://test-app:80/
 
 jobs:
@@ -107,14 +107,16 @@ jobs:
       - name: Wait for app to be ready (máx. 10s)
         if: env.RUN_NUCLEI == 'true'
         run: |
-          APP_URL="${{ env.APP_URL }}"
-          docker run --rm --network devsecops-net curlimages/curl \
-            sh -c 'count=0; while ! curl -s "$APP_URL"; do
-              echo "Waiting for app... ($count)"
-              sleep 1
-              count=$((count + 1))
-              [ $count -ge 10 ] && echo "Timeout waiting for app." && exit 1
-            done'
+          for i in {1..10}; do
+            echo "Waiting for app on localhost:${{ env.APP_PORT }}... (attempt $i)"
+            if curl -sSf http://localhost:${{ env.APP_PORT }} > /dev/null; then
+              echo "App is ready!"
+              exit 0
+            fi
+            sleep 1
+          done
+          echo "Timeout: app did not become ready in 10 seconds."
+          exit 1
 
 
       # Escaneo Nuclei
