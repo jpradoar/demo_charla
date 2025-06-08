@@ -1,0 +1,117 @@
+name: DevSecOps Full Pipeline
+
+on:
+  push:
+    branches: [main]
+
+env:
+  # Activadores por herramienta
+  RUN_GITLEAKS: true
+  RUN_LINTIAN: false
+  RUN_TFSEC: false
+  RUN_TRIVY: false
+  RUN_NUCLEI: true
+
+  # Configuraciones específicas
+  DEB_PATH: deb_packages/package/demo-app.deb
+  TERRAFORM_PATH: terraform
+  DOCKER_IMAGE_NAME: vuln_docker:latest
+
+  # App para test con Nuclei
+  APP_IMAGE: nginx:latest
+  APP_CONTAINER_NAME: test-app
+  APP_PORT: 8080:80
+  APP_URL: http://test-app:80/
+
+jobs:
+  devsecops:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+
+#-----------------------------------
+# Escaneo de secretos con Gitleaks
+#-----------------------------------
+      - name: Run Gitleaks
+        if: env.RUN_GITLEAKS == 'true'
+        run: |
+          docker run --rm -v $PWD:/data zricethezav/gitleaks \
+            detect -v --source=/data --exit-code 0
+
+
+
+#-----------------------------------
+# Crear un paquete .deb
+#-----------------------------------
+      - name: Build package
+        if: env.RUN_LINTIAN == 'true'
+        run: |
+          echo "Acá se buildea el .deb y se guarda en env.DEB_PATH"
+
+#-----------------------------------
+# Escaneo de paquete .deb
+#-----------------------------------
+      - name: Run Lintian
+        if: env.RUN_LINTIAN == 'true'
+        run: |
+          docker run --rm -v $PWD:/data nouchka/lintian /data/$DEB_PATH
+
+
+
+#-----------------------------------
+# Análisis Terraform
+#-----------------------------------
+      - name: Run Tfsec
+        if: env.RUN_TFSEC == 'true'
+        run: |
+          docker run --rm -v $PWD:/data tfsec/tfsec /data/$TERRAFORM_PATH
+
+
+#-----------------------------------
+# Construir imagen docker para escanear
+#-----------------------------------
+      - name: Build image
+        if: env.RUN_TRIVY == 'true'
+        run: |
+          docker build -t $DOCKER_IMAGE_NAME .
+          docker save vuln_docker:latest -o vuln_docker.tar
+
+      # Escaneo de imagen con Trivy (el docker save es para no montar el /run/socket.sock)
+      - name: Run Trivy
+        if: env.RUN_TRIVY == 'true'
+        run: |
+          docker run --rm -v $PWD:/data aquasec/trivy image --ignore-unfixed --detection-priority precise -s HIGH -q --input /data/vuln_docker.tar
+
+
+
+
+#-----------------------------------
+# Simular un analisis desde internet 
+# (tipo external endpoint, LB o url de Route53 de aws )
+#-----------------------------------
+
+
+      - name: Create Docker network (para Nuclei)
+        if: env.RUN_NUCLEI == 'true'
+        run: docker network create devsecops-net
+
+      # Lanzar la app de demo
+      - name: Start demo app container
+        if: env.RUN_NUCLEI == 'true'
+        run: |
+          docker run -d --name $APP_CONTAINER_NAME --network devsecops-net -p $APP_PORT $APP_IMAGE
+
+      # Esperar que levante la app
+      - name: Wait for app to be ready
+        if: env.RUN_NUCLEI == 'true'
+        run: |
+          docker run --rm --network devsecops-net curlimages/curl sh -c 'until curl -s "$APP_URL"; do echo "Waiting for app..."; sleep 1; done'
+
+      # Escaneo Nuclei
+      - name: Run Nuclei scan
+        if: env.RUN_NUCLEI == 'true'
+        run: |
+          docker run --rm --network devsecops-net projectdiscovery/nuclei -u "$APP_URL" -silent
